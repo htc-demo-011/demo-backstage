@@ -62,34 +62,26 @@ jobs:
         if: ${{ github.repository_owner != 'humanitec' }}
         run: |-
           curl \
-            --request POST 'https://api.humanitec.io/orgs/${{ secrets.HUMANITEC_ORG_ID }}/images/backstage/builds' \
+            --request POST 'https://api.humanitec.io/orgs/${{ secrets.HUMANITEC_ORG_ID }}/artefact-versions' \
             --header 'Authorization: Bearer ${{ secrets.HUMANITEC_TOKEN }}' \
             --header 'Content-Type: application/json' \
             --data-raw '{
-                "branch": "'$GITHUB_REF_NAME'",
+                "name": "'$AWS_ECR/$IMAGE'",
+                "version": "'$TAG'",
+                "type": "container",
                 "commit": "'$GITHUB_SHA'",
-                "image": "'$AWS_ECR/$IMAGE:$TAG'",
-                "tags": ["'$TAG'"]
+                "ref": "'$GITHUB_REF'"
             }'
 
-
-      - name: Create overrides file
-        if: ${{ github.repository_owner != 'humanitec' }}
-        run: |
-          wget -q https://github.com/mikefarah/yq/releases/download/v4.30.8/yq_linux_amd64 -O yq
-          chmod +x yq
-          mv yq /usr/local/bin
-
-          yq e -n ".containers.backstage.image = \"$AWS_ECR/$IMAGE:$TAG\"" > backstage.overrides.score.yaml
 
       - name: Install score-humanitec
         if: ${{ github.repository_owner != 'humanitec' }}
         run: |
-          wget https://github.com/score-spec/score-humanitec/releases/download/0.5.0/score-humanitec_0.5.0_linux_amd64.tar.gz
-          tar -xvf score-humanitec_0.5.0_linux_amd64.tar.gz
+          wget https://github.com/score-spec/score-humanitec/releases/download/0.6.0/score-humanitec_0.6.0_linux_amd64.tar.gz
+          tar -xvf score-humanitec_0.6.0_linux_amd64.tar.gz
           chmod +x score-humanitec
           mv score-humanitec /usr/local/bin
 
       - name: Run Score
         if: ${{ github.repository_owner != 'humanitec' }}
-        run: score-humanitec delta --retry --deploy --token ${{ secrets.HUMANITEC_TOKEN }} --org ${{ secrets.HUMANITEC_ORG_ID }} --app backstage --env development -f score.yaml --extensions humanitec.score.yaml  --overrides backstage.overrides.score.yaml
+        run: score-humanitec delta --retry --deploy --token ${{ secrets.HUMANITEC_TOKEN }} --org ${{ secrets.HUMANITEC_ORG_ID }} --app backstage --env development -f score.yaml --extensions humanitec.score.yaml  --property containers.backstage.image=$AWS_ECR/$IMAGE:$TAG
