@@ -21,13 +21,17 @@ jobs:
         run: echo "TAG=`echo $GITHUB_SHA | cut -c 1-7`" >> $GITHUB_ENV
 
       - run: |
+          {% raw %}
           echo "${{ secrets.ACR_PUSH_SP_PASSWORD }}" | docker login \
               ${{ secrets.ACR_SERVER_NAME }} \
               -u ${{ secrets.ACR_PUSH_SP_ID }} \
               --password-stdin
+          {% endraw %}
       - run: npm install
+      {% raw %}
       - run: docker build --platform linux/amd64 . -t ${{ secrets.ACR_SERVER_NAME }}/$IMAGE:$TAG
       - run: docker push ${{ secrets.ACR_SERVER_NAME }}/$IMAGE:$TAG
+      {% endraw %}
 {% raw %}
       - name: Inform Humanitec
         run: |-
